@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { toCsv, toMarkdown } from "@/lib/export.ts";
 import { markAgainst, replaceIds, type Segment } from "@/lib/highlight.ts";
 import { score, type AnswerKey } from "@/lib/score.ts";
 import type { Item, Report } from "@/lib/types.ts";
@@ -8,48 +10,55 @@ function Marked({ segs }: { segs: Segment[] }) {
   return <>{segs.map((s, i) => (s.mark ? <mark key={i}>{s.text}</mark> : <span key={i}>{s.text}</span>))}</>;
 }
 
+function download(name: string, content: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+type Tab = "diff" | "missing" | "added" | "verify" | "score";
+
 export function ReportView({ report, answerKey }: { report: Report; answerKey: AnswerKey | null }) {
+  const [tab, setTab] = useState<Tab>("diff");
   const items = new Map<string, Item>([...report.template.items, ...report.submission.items].map((i) => [i.id, i]));
   const get = (id: string) => items.get(id);
   const c = report.comparison;
   const rows = answerKey ? score(report, answerKey) : null;
+  const passed = rows?.filter((r) => r.pass).length ?? 0;
+  const warns = report.checks.filter((k) => k.level !== "ok").length;
+
+  const tabs: [Tab, string][] = [
+    ["diff", `規格差異 ${c.diffs.length}`],
+    ["missing", `送審缺漏 ${c.missing.length}`],
+    ["added", `送審新增 ${c.added.length}`],
+    ["verify", `程式驗證${warns ? ` ⚠${warns}` : " ✓"}`],
+    ...(rows ? ([["score", `對答案 ${passed}/${rows.length}`]] as [Tab, string][]) : []),
+  ];
 
   return (
-    <>
-      <section className="card">
-        <h2>3. 比對結果</h2>
-        <p className="small" style={{ marginBottom: 10 }}>
-          公版：{report.template.title}　｜　送審：{report.submission.title}　｜　模型 {report.model}
-        </p>
-        <div className="summary">
-          <div className="stat"><div className="n">{c.diffs.length}</div><div className="l">規格差異</div></div>
-          <div className="stat"><div className="n">{c.missing.length}</div><div className="l">送審缺漏</div></div>
-          <div className="stat"><div className="n">{c.added.length}</div><div className="l">送審新增</div></div>
-          <div className="stat"><div className="n">{c.matched.length}</div><div className="l">內容相同</div></div>
-        </div>
-      </section>
+    <section className="result">
+      <div className="chips">
+        <span className="chip"><b>{c.diffs.length}</b> 差異</span>
+        <span className="chip"><b>{c.missing.length}</b> 缺漏</span>
+        <span className="chip"><b>{c.added.length}</b> 新增</span>
+        <span className="chip"><b>{c.matched.length}</b> 相同</span>
+        {rows && <span className="chip score">範例命中 <b>{passed}/{rows.length}</b></span>}
+        <span className="hint">{(report.elapsedMs / 1000).toFixed(0)} 秒・{report.model}</span>
+      </div>
 
-      {rows && (
-        <section className="card">
-          <h2>範例對答案：{rows.filter((r) => r.pass).length} / {rows.length}</h2>
-          <p className="small">範例文件預埋的差異、缺漏、新增，以及不應被列出的陷阱（要求移到別章、內容相同）。</p>
-          <div className="score-list">
-            {rows.map((r, i) => (
-              <div key={i} className={r.pass ? "pass" : "fail"}>
-                {r.pass ? "✔" : "✘"} <span className="small">{r.group}</span> {r.label}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="tabs">
+        {tabs.map(([k, label]) => (
+          <button key={k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>{label}</button>
+        ))}
+      </div>
 
-      <section className="card">
-        <h2>表一　規格差異</h2>
+      {tab === "diff" && (
         <div className="table-wrap">
           <table>
-            <thead>
-              <tr><th>公版位置</th><th>公版原文</th><th>送審位置</th><th>送審原文</th><th>差異說明</th></tr>
-            </thead>
+            <thead><tr><th>公版</th><th>公版原文</th><th>送審</th><th>送審原文</th><th>差異</th></tr></thead>
             <tbody>
               {c.diffs.map((d, i) => {
                 const t = get(d.t_id)?.text ?? "";
@@ -61,8 +70,8 @@ export function ReportView({ report, answerKey }: { report: Report; answerKey: A
                     <td className="loc">{d.s_ids.map((id) => get(id)?.loc).join("、")}</td>
                     <td><Marked segs={markAgainst(s, t)} /></td>
                     <td>
-                      <span className="badge">{d.kind}</span>
-                      {d.uncertain && <span className="badge warn">待確認</span>}
+                      <span className="tag">{d.kind}</span>
+                      {d.uncertain && <span className="tag warn">待確認</span>}
                       {d.summary}
                     </td>
                   </tr>
@@ -72,32 +81,30 @@ export function ReportView({ report, answerKey }: { report: Report; answerKey: A
             </tbody>
           </table>
         </div>
-      </section>
+      )}
 
-      <section className="card">
-        <h2>表二　送審版缺漏</h2>
+      {tab === "missing" && (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>公版位置</th><th>公版原文</th><th>查核說明</th></tr></thead>
+            <thead><tr><th>公版</th><th>公版原文</th><th>說明</th></tr></thead>
             <tbody>
               {c.missing.map((m, i) => (
                 <tr key={i}>
                   <td className="loc">{get(m.t_id)?.loc}</td>
                   <td>{get(m.t_id)?.text}</td>
-                  <td>{m.applicability_unknown && <span className="badge warn">適用性待確認</span>}{m.note}</td>
+                  <td>{m.applicability_unknown && <span className="tag warn">適用性待確認</span>}{m.note}</td>
                 </tr>
               ))}
               {c.missing.length === 0 && <tr><td colSpan={3}>本次未發現</td></tr>}
             </tbody>
           </table>
         </div>
-      </section>
+      )}
 
-      <section className="card">
-        <h2>表三　送審版新增</h2>
+      {tab === "added" && (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>送審位置</th><th>送審原文</th><th>說明</th></tr></thead>
+            <thead><tr><th>送審</th><th>送審原文</th><th>說明</th></tr></thead>
             <tbody>
               {c.added.map((a, i) => (
                 <tr key={i}>
@@ -110,47 +117,39 @@ export function ReportView({ report, answerKey }: { report: Report; answerKey: A
             </tbody>
           </table>
         </div>
-      </section>
+      )}
 
-      <section className="card">
-        <h2>補充說明</h2>
-        {c.notes.length ? (
-          <ul>{c.notes.map((n, i) => <li key={i}>{replaceIds(n, items)}</li>)}</ul>
-        ) : (
-          <p className="small">無</p>
-        )}
-        <details style={{ marginTop: 12 }}>
-          <summary>內容相同的 {c.matched.length} 組條文</summary>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>公版位置</th><th>公版原文</th><th>送審位置</th><th>送審原文</th></tr></thead>
-              <tbody>
-                {c.matched.map((m, i) => (
-                  <tr key={i}>
-                    <td className="loc">{get(m.t_id)?.loc}</td>
-                    <td>{get(m.t_id)?.text}</td>
-                    <td className="loc">{m.s_ids.map((id) => get(id)?.loc).join("、")}</td>
-                    <td>{m.s_ids.map((id) => get(id)?.text).join("；")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      </section>
-
-      <section className="card">
-        <h2>程式驗證</h2>
-        <p className="small" style={{ marginBottom: 8 }}>以下檢查不經過模型，由程式對照原文與比對結果。</p>
-        <div className="checks">
+      {tab === "verify" && (
+        <div>
           {report.checks.map((k, i) => (
-            <div key={i} className={`check ${k.level}`}>
-              <div className="t">{k.level === "ok" ? "✔" : "⚠"} {k.title}</div>
+            <div key={i} className="check">
+              <span className={k.level === "ok" ? "pass" : "fail"}>{k.level === "ok" ? "✓" : "⚠"}</span> {k.title}
               <ul>{k.detail.map((d, j) => <li key={j}>{d}</li>)}</ul>
             </div>
           ))}
+          {c.notes.length > 0 && (
+            <div className="check">
+              補充說明
+              <ul>{c.notes.map((n, i) => <li key={i}>{replaceIds(n, items)}</li>)}</ul>
+            </div>
+          )}
         </div>
-      </section>
-    </>
+      )}
+
+      {tab === "score" && rows && (
+        <div className="score-list">
+          {rows.map((r, i) => (
+            <div key={i} className={r.pass ? "pass" : "fail"}>
+              {r.pass ? "✓" : "✗"} <span className="hint">{r.group}</span> {r.label}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="exports">
+        <button onClick={() => download("比對報告.md", toMarkdown(report), "text/markdown")}>匯出 Markdown</button>
+        <button onClick={() => download("比對報告.csv", toCsv(report), "text/csv")}>匯出 CSV</button>
+      </div>
+    </section>
   );
 }

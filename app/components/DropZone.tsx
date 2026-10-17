@@ -4,11 +4,12 @@ import { useState } from "react";
 
 type Props = { role: string; file: File | null; onFile: (f: File) => void; disabled?: boolean };
 
+// 附件膠囊：點擊選檔或拖曳
 export function DropZone({ role, file, onFile, disabled }: Props) {
   const [over, setOver] = useState(false);
   return (
     <label
-      className={`drop${over ? " over" : ""}`}
+      className={`attach${file ? " filled" : ""}${over ? " over" : ""}`}
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => {
@@ -24,9 +25,11 @@ export function DropZone({ role, file, onFile, disabled }: Props) {
         disabled={disabled}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
       />
-      <div className="role">{role}</div>
-      <div className="hint">點擊選擇或拖曳檔案到這裡</div>
-      {file && <div className="file">📄 {file.name}（{(file.size / 1024).toFixed(0)} KB）</div>}
+      <span>📎</span>
+      <span>
+        <div className="role">{role}</div>
+        <div className="fname">{file ? file.name : "選擇檔案"}</div>
+      </span>
     </label>
   );
 }
