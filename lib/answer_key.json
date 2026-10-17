@@ -1,0 +1,76 @@
+{
+  "diff": [
+    {
+      "template": "2.2",
+      "label": "保固 24 個月 → 12 個月"
+    },
+    {
+      "template": "3.2",
+      "label": "排氣壓力 0.7 → 0.8 MPa"
+    },
+    {
+      "template": "3.3",
+      "label": "排氣量 ≥10 → 9.5 m³/min"
+    },
+    {
+      "template": "3.4",
+      "label": "馬達 IE4 → IE3"
+    },
+    {
+      "template": "3.5",
+      "label": "變頻範圍 40% → 50% 起"
+    },
+    {
+      "template": "3.6",
+      "label": "噪音 72 → 75 dB(A)"
+    },
+    {
+      "template": "4.2",
+      "label": "含油量單位 mg/m³ → ppm"
+    },
+    {
+      "template": "7.2",
+      "label": "運轉測試 72 → 24 小時，且未要求不得異常停機"
+    }
+  ],
+  "missing": [
+    {
+      "template": "2.4",
+      "label": "教育訓練 8 小時"
+    },
+    {
+      "template": "5.4",
+      "label": "運轉資料保存 12 個月"
+    },
+    {
+      "template": "6.2",
+      "label": "緊急停止按鈕"
+    }
+  ],
+  "added": [
+    {
+      "submission": "3.3",
+      "keyword": "4G",
+      "label": "4G 雲端監控與手機 App"
+    },
+    {
+      "submission": "5.1",
+      "keyword": "熱回收",
+      "label": "熱回收裝置"
+    }
+  ],
+  "traps": [
+    {
+      "template": "5.2",
+      "label": "Modbus TCP 移到送審 1.2，不應列為缺漏"
+    },
+    {
+      "template": "4.1",
+      "label": "壓力露點相同，不應列為差異"
+    },
+    {
+      "template": "2.1",
+      "label": "CNS/IEC 併入送審 1.1，不應列為缺漏"
+    }
+  ]
+}
