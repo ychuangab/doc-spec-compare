@@ -9,7 +9,7 @@ import { ReportView } from "./components/ReportView.tsx";
 
 const SAMPLE_T = "公版_空壓機系統標準規範.docx";
 const SAMPLE_S = "送審_空壓機系統規格書.pdf";
-const REPO_URL = "https://github.com/ychuangab/spec-compare-demo";
+const REPO_URL = "https://github.com/ychuangab/doc-spec-compare";
 
 type Stage = "parse" | "extract" | "compare" | "verify";
 const STEPS: { key: Stage; name: string; desc: string }[] = [
