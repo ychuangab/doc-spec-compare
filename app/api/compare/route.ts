@@ -1,4 +1,4 @@
-import { compareItems, extractItems, MODEL } from "@/lib/gemini.ts";
+import { compareItems, extractItems } from "@/lib/gemini.ts";
 import { parseFile } from "@/lib/parse.ts";
 import { allow } from "@/lib/ratelimit.ts";
 import type { ParsedDoc, StreamEvent } from "@/lib/types.ts";
@@ -30,11 +30,14 @@ export async function POST(req: Request) {
         send({ type: "stage", stage: "parse", status: "done" });
 
         send({ type: "stage", stage: "extract", status: "start" });
-        const [te, se] = await Promise.all([extractItems(tp.input, "T"), extractItems(sp.input, "S")]);
+        const [{ model: m1, ...te }, { model: m2, ...se }] = await Promise.all([
+          extractItems(tp.input, "T"),
+          extractItems(sp.input, "S"),
+        ]);
         send({ type: "stage", stage: "extract", status: "done", detail: `公版 ${te.items.length} 條、送審 ${se.items.length} 條` });
 
         send({ type: "stage", stage: "compare", status: "start" });
-        const comparison = await compareItems(te.items, se.items);
+        const { data: comparison, model: m3 } = await compareItems(te.items, se.items);
         send({
           type: "stage",
           stage: "compare",
@@ -56,7 +59,7 @@ export async function POST(req: Request) {
             submission: { ...submission, sourceText: null },
             comparison,
             checks,
-            model: MODEL,
+            model: [...new Set([m1, m2, m3])].join("、"),
             elapsedMs: Date.now() - started,
           },
         });
