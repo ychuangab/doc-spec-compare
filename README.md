@@ -38,6 +38,10 @@
 預埋 8 處規格差異、3 處缺漏、2 處新增，另有 3 個陷阱（要求移到別章、合併敘述、內容相同），答案在 `lib/answer_key.json`。
 用範例比對時，頁面會自動對答案。目前 `gemini-3.8-flash` 在範例上為 16/16，約 30～45 秒。
 
+## 說明簡報
+
+8 頁 Marp 簡報：`/slides/index.html`（PDF：`/slides/deck.pdf`）。原始檔 `slides-src/deck.md`，操作畫面為正式環境截圖（`public/slides/img/`）；重建：`bash slides-src/build.sh`。
+
 ## 本機執行
 
 ```bash
